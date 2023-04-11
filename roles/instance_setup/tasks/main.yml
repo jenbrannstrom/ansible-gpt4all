@@ -1,17 +1,17 @@
 ---
 - name: Generate an RSA key pair
-  community.crypto.openssl_privatekey:
-    path: "{{ key_file }}.pem"
-    size: 2048
+  ansible.builtin.openssl_privatekey:
+    path: "{{ key_file }}"
     type: RSA
-  register: rsa_key_pair
-  run_once: true
+    size: 2048
+    mode: 0600
+  register: private_key_result
+  changed_when: private_key_result is changed
 
 - name: Generate the public key from the private key
   ansible.builtin.shell:
     cmd: ssh-keygen -y -f "{{ key_file }}"
   register: ssh_key_gen_output
-
 
 - name: Import the public key to AWS
   amazon.aws.ec2_key:
@@ -20,22 +20,36 @@
     region: "{{ region }}"
   register: ec2_key_result
 
-- name: Launch Spot instance
-  amazon.aws.ec2_instance:
-    state: present
+- name: Request Spot instance
+  community.aws.ec2:
     key_name: "{{ key_name }}"
     instance_type: t2.micro
     image: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
     wait: yes
     vpc_subnet_id: "{{ subnet.subnet.id }}"
-    instance_tags:
-      Name: GPT4All Instance
     spot_price: "0.0075"
     region: "us-east-1"
     aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
     aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    instance_tags:
+      Name: GPT4All Instance
     instance_initiated_shutdown_behavior: terminate
-  register: ec2
+    count_tag:
+      Name: GPT4All Instance
+    exact_count: 1
+  register: spot_request
+
+
+- name: Tag Spot instance
+  amazon.aws.ec2_tag:
+    resource: "{{ spot_request.instance_id }}"
+    region: "us-east-1"
+    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    state: present
+    tags:
+      Name: GPT4All Instance
+
 
 - name: Allocate a new Elastic IP
   amazon.aws.ec2_eip:
@@ -49,5 +63,6 @@
     region: "us-east-1"
     AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
     AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    instance_id: "{{ ec2.instance_ids[0] }}"
+    instance_id: "{{ spot_request.instance_id }}"
     ip: "{{ eip.public_ip }}"
+
