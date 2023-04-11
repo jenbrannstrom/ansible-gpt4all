@@ -8,15 +8,17 @@
   run_once: true
 
 - name: Generate the public key from the private key
-  community.crypto.openssl_publickey:
-    privatekey_path: "{{ key_file }}.pem"
-    path: "{{ key_file }}.pub"
-  register: public_key_result
+  ansible.builtin.shell:
+    cmd: ssh-keygen -y -f "{{ key_file }}"
+  register: ssh_key_gen_output
+
 
 - name: Import the public key to AWS
   amazon.aws.ec2_key:
     name: "{{ key_name }}"
-    key_material: "{{ public_key_result.public_key }}"
+    key_material: "{{ lookup('file', key_file + '.pub') }}"
+    region: "{{ region }}"
+  register: ec2_key_result
 
 - name: Launch Spot instance
   amazon.aws.ec2_instance:
