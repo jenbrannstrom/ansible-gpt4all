@@ -1,0 +1,51 @@
+---
+- name: Create VPC
+  amazon.aws.ec2_vpc_net:
+    name: "GPT4All VPC"
+    cidr_block: 10.0.0.0/16
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+  register: vpc
+
+- name: Create subnet
+  amazon.aws.ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    cidr: 10.0.1.0/24
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+  register: subnet
+
+- name: Create internet gateway
+  amazon.aws.ec2_vpc_igw:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+  register: igw
+
+- name: Create route table
+  amazon.aws.ec2_vpc_route_table:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: route_table
+
+- name: Associate the route table with the subnet
+  amazon.aws.ec2_vpc_route_table:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    route_table_id: "{{ route_table.route_table.id }}"
+    subnets:
+      - "{{ subnet.subnet.id }}"
