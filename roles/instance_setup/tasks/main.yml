@@ -11,8 +11,16 @@
   amazon.aws.ec2_key:
     name: "{{ key_name }}"
     key_material: "{{ rsa_key_pair.public_key }}"
-
-
+---
+- name: Generate an RSA key pair
+  community.crypto.openssl_privatekey:
+    path: "{{ key_file }}.pem"
+    size: 2048
+    type: RSA
+  register: rsa_key_pair
+  run_once: true
+  debug:
+    msg: "The key pair
 - name: Launch Spot instance
   amazon.aws.ec2_instance:
     state: present
