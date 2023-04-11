@@ -21,7 +21,7 @@
   register: ec2_key_result
 
 - name: Request Spot instance
-  community.aws.ec2:
+  amazon.aws.ec2_instance:
     key_name: "{{ key_name }}"
     instance_type: t2.micro
     image: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
@@ -38,6 +38,7 @@
       Name: GPT4All Instance
     exact_count: 1
   register: spot_request
+
 
 
 - name: Tag Spot instance
