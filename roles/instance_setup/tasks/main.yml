@@ -1,17 +1,17 @@
 ---
 - name: Generate an RSA key pair
-  ansible.builtin.openssh_keypair:
-    path: "{{ playbook_dir }}/keypair_for_gpt4all"
-    type: rsa
+  community.crypto.openssl_privatekey:
+    path: "{{ key_file }}.pem"
     size: 2048
-  register: rsa_keypair
+    type: RSA
+  register: rsa_key_pair
+  run_once: true
 
 - name: Import the public key to AWS
   amazon.aws.ec2_key:
     name: "{{ key_name }}"
-    key_material: "{{ lookup('file', playbook_dir + '/keys/id_rsa.pub') }}"
-    state: present
-  register: import_key_result
+    key_material: "{{ rsa_key_pair.public_key }}"
+
 
 - name: Launch Spot instance
   amazon.aws.ec2_instance:
