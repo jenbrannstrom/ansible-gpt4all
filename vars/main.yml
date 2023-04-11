@@ -1,0 +1,2 @@
+key_name: "jen_gpt4all"
+key_file: "{{ playbook_dir }}/keys/{{ key_name }}"
