@@ -20,23 +20,35 @@
     region: "{{ region }}"
   register: ec2_key_result
 
-- name: Request Spot instance
-  amazon.aws.ec2_instance:
+
+
+- name: Create launch template for Spot Instance
+  amazon.aws.ec2_launch_template:
+    name: "{{ launch_template_name }}"
+    image_id: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
     key_name: "{{ key_name }}"
     instance_type: t2.micro
-    image_id: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
-    wait: yes
     vpc_subnet_id: "{{ subnet.subnet.id }}"
-    spot_price: "0.0075"
-    region: "us-east-1"
+    region: "{{ region }}"
     aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
     aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    instance_initiated_shutdown_behavior: terminate
-    launch_specification:
-      InstanceMarketOptions:
-        MarketType: 'spot'
-        SpotOptions:
-          MaxPrice: '0.0075'
+  register: launch_template
+
+
+- name: Request Spot instance
+  amazon.aws.ec2:
+    spot_launch_template:
+      launch_template_name: "{{ launch_template_name }}"
+      version: "{{ launch_template.latest_version_number }}"
+    spot_price: "0.0075"
+    region: "{{ region }}"
+    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    instance_tags:
+      Name: GPT4All Instance
+    wait: yes
+    vpc_subnet_id: "{{ subnet.subnet.id }}"
+    count: 1
   register: spot_request
 
 
