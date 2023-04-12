@@ -39,34 +39,29 @@
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
 
-
-- name: Allocate new Elastic IP address
+- name: request new Elastic IP address
   community.aws.ec2_eip:
     state: present
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
   register: eip
 
-- name: Wait for instance to be running
+- name: Wait for instance to reach the running state
   community.aws.ec2_instance_info:
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
-    resource_ids:
+    instance_ids:
       - "{{ resource_id }}"
-  register: ec2_instance
+  register: ec2_instance_running
+  until: ec2_instance_running.instances[0].state.name == 'running'
+  retries: 10
+  delay: 10
 
-- name: Wait for instance to be ready
-  wait_for:
-    host: "{{ ec2_instance.instances[0].public_ip_address }}"
-    port: 22
-    delay: 10
-    timeout: 300
-  when: ec2_instance.instances[0].state.name == 'running'
-
-- name: Associate the new Elastic IP with the instance
+- name: confirm Elastic IP with instance
   community.aws.ec2_eip:
-    resource_id: "{{ resource_id }}"
-    public_ip: "{{ eip.public_ip }}"
+    state: present
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
-
+    public_ip: "{{ eip.public_ip }}"
+    device_id: "{{ resource_id }}"
+  register: eip_association
