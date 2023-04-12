@@ -35,7 +35,6 @@
   amazon.aws.ec2_spot_instance:
     spot_price: "{{ spot_price }}"
     region: "{{ region }}"
-    wait: yes
     launch_specification:
       image_id: "{{ image_id }}"
       instance_type: t2.micro
@@ -44,10 +43,8 @@
         - "{{ security_group_id }}"
       subnet_id: "{{ vpc_subnet_id }}"
     tags:
-        Name: "{{ instance_name }}"
+      Name: "{{ instance_name }}"
   register: spot_instance
-
-
 
 - name: Get instance ID from Spot instance request
   set_fact:
