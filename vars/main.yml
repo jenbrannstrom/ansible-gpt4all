@@ -1,9 +1,11 @@
 key_name: "keypair_for_gpt4all"
 key_file: "{{ playbook_dir }}/keys/{{ key_name }}"
 launch_template_name: "GPT4All-Launch-Template"
+region: "us-east-1"
 instance_type: "t2.micro"
 image_id: "ami-06e46074ae430fba6"
 spot_price: "0.01"
+wait_timeout: 600
 spot_wait_timeout: 600
 vpc_subnet_id: "{{ vpc_subnet_id }}"
 security_group_id: "{{ security_group_id }}"

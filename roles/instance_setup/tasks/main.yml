@@ -32,20 +32,19 @@
   register: launch_template
 
 - name: Request Spot instance
-  amazon.aws.ec2_spot_instance_request:
-    region: "{{ region }}"
-    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+  amazon.aws.ec2_spot_instance:
     spot_price: "{{ spot_price }}"
-    spot_wait_timeout: "{{ wait_timeout }}"
-    state: "present"
-    instance_type: "{{ instance_type }}"
-    image_id: "{{ ami_id }}"
-    key_name: "{{ key_pair }}"
-    security_group_ids: "{{ security_group_id }}"
-    vpc_subnet_id: "{{ vpc_subnet_id }}"
-    instance_tags:
-      Name: GPT-4 All
+    region: "{{ region }}"
+    wait: yes
+    launch_specification:
+      image_id: "{{ image_id }}"
+      instance_type: t2.micro
+      key_name: "{{ key_name }}"
+      security_group_ids:
+        - "{{ security_group_id }}"
+      subnet_id: "{{ vpc_subnet_id }}"
+    tags:
+        Name: "{{ instance_name }}"
   register: spot_instance
 
 
