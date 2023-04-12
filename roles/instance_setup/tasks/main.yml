@@ -3,8 +3,6 @@
   amazon.aws.ec2_spot_instance:
     spot_price: "{{ spot_price }}"
     state: present
-    wait: true
-    wait_timeout: "{{ spot_wait_timeout }}"
     region: "{{ region }}"
     launch_specification:
       image_id: "{{ image_id }}"
@@ -22,27 +20,43 @@
       Name: "{{ instance_name }}"
   register: spot_instance
 
+- name: Debug spot_instance
+  ansible.builtin.debug:
+    var: spot_instance
+
+- name: Wait for spot instance request to be active
+  command: "aws ec2 describe-spot-instance-requests --spot-instance-request-ids {{ spot_instance.spot_request.spot_instance_request_id }} --region {{ region }}"
+  register: spot_instance_request
+  until: spot_instance_request.stdout | from_json | json_query('SpotInstanceRequests[0].Status.Code') == "fulfilled"
+  retries: 30
+  delay: 10
+
 - name: Get instance ID from Spot instance request
   set_fact:
-    instance_id: "{{ spot_instance.instance_id }}"
+    instance_id: "{{ spot_instance_request.stdout | from_json | json_query('SpotInstanceRequests[0].InstanceId') }}"
+
 
 - name: Tag Spot instance
-  amazon.aws.ec2_create_tags:
-    resources: ["{{ instance_id }}"]
+  amazon.aws.ec2_tag:
+    resource: "{{ instance_id }}"
     tags:
       Name: "{{ instance_name }}"
+    state: present
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
-
-- name: Allocate a new Elastic IP
-  amazon.aws.ec2_allocate_address:
-    domain: vpc
-    region: "{{ region }}"
-    aws_profile: "{{ aws_profile }}"
-  register: eip
 
 - name: Associate the new Elastic IP with the instance
-  amazon.aws.ec2_associate_address:
+  community.aws.ec2_eip:
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    instance_id: "{{ instance_id }}"
+    ip: "{{ eip.public_ip }}"
+  register: eip_association
+
+
+
+- name: Associate the new Elastic IP with the instance
+  community.aws.ec2_eip:
     instance_id: "{{ instance_id }}"
     public_ip: "{{ eip.public_ip }}"
     region: "{{ region }}"
