@@ -35,7 +35,6 @@
   set_fact:
     instance_id: "{{ spot_instance_request.stdout | from_json | json_query('SpotInstanceRequests[0].InstanceId') }}"
 
-
 - name: Tag Spot instance
   amazon.aws.ec2_tag:
     resource: "{{ instance_id }}"
@@ -44,16 +43,6 @@
     state: present
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
-
-- name: Associate the new Elastic IP with the instance
-  community.aws.ec2_eip:
-    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    instance_id: "{{ instance_id }}"
-    ip: "{{ eip.public_ip }}"
-  register: eip_association
-
-
 
 - name: Associate the new Elastic IP with the instance
   community.aws.ec2_eip:
