@@ -1,78 +1,49 @@
 ---
-- name: Generate an RSA key pair
-  ansible.builtin.openssl_privatekey:
-    path: "{{ key_file }}"
-    type: RSA
-    size: 2048
-    mode: 0600
-  register: private_key_result
-  changed_when: private_key_result is changed
-
-- name: Generate the public key from the private key
-  ansible.builtin.shell:
-    cmd: ssh-keygen -y -f "{{ key_file }}"
-  register: ssh_key_gen_output
-
-- name: Import the public key to AWS
-  amazon.aws.ec2_key:
-    name: "{{ key_name }}"
-    key_material: "{{ lookup('file', key_file + '.pub') }}"
-    region: "{{ region }}"
-  register: ec2_key_result
-
-- name: Create launch template for Spot Instance
-  community.aws.ec2_launch_template:
-    name: "{{ launch_template_name }}"
-    image_id: ami-06e46074ae430fba6
-    instance_type: t2.micro
-    key_name: "{{ key_name }}"
-    region: "{{ region }}"
-    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-  register: launch_template
-
 - name: Request Spot instance
   amazon.aws.ec2_spot_instance:
     spot_price: "{{ spot_price }}"
+    state: present
+    wait: true
+    wait_timeout: "{{ spot_wait_timeout }}"
     region: "{{ region }}"
     launch_specification:
       image_id: "{{ image_id }}"
-      instance_type: t2.micro
+      instance_type: "{{ instance_type }}"
       key_name: "{{ key_name }}"
-      security_group_ids:
-        - "{{ security_group_id }}"
+      security_group_ids: ["{{ security_group_id }}"]
       subnet_id: "{{ vpc_subnet_id }}"
+      block_device_mappings:
+        - device_name: /dev/sda1
+          ebs:
+            volume_size: 8
+            volume_type: gp2
+            delete_on_termination: true
     tags:
       Name: "{{ instance_name }}"
   register: spot_instance
 
 - name: Get instance ID from Spot instance request
   set_fact:
-    instance_id: "{{ spot_request.instances[0].instance_id }}"
+    instance_id: "{{ spot_instance.instance_id }}"
 
 - name: Tag Spot instance
-  amazon.aws.ec2_instance:
-    instance_ids: "{{ instance_id }}"
+  amazon.aws.ec2_create_tags:
+    resources: ["{{ instance_id }}"]
     tags:
-      Name: GPT4All Instance
-    region: "us-east-1"
-    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-
-
+      Name: "{{ instance_name }}"
+    region: "{{ region }}"
+    aws_profile: "{{ aws_profile }}"
 
 - name: Allocate a new Elastic IP
-  amazon.aws.ec2_eip:
-    region: "us-east-1"
-    AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+  amazon.aws.ec2_allocate_address:
+    domain: vpc
+    region: "{{ region }}"
+    aws_profile: "{{ aws_profile }}"
   register: eip
 
 - name: Associate the new Elastic IP with the instance
-  amazon.aws.ec2_eip:
-    region: "us-east-1"
-    AWS_ACCESS_KEY_ID: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-    AWS_SECRET_ACCESS_KEY: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    instance_id: "{{ spot_request.instance_id }}"
-    ip: "{{ eip.public_ip }}"
-
+  amazon.aws.ec2_associate_address:
+    instance_id: "{{ instance_id }}"
+    public_ip: "{{ eip.public_ip }}"
+    region: "{{ region }}"
+    aws_profile: "{{ aws_profile }}"
