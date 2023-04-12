@@ -18,6 +18,10 @@
     secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
   register: subnet
 
+- name: Set vpc_subnet_id variable
+  set_fact:
+    vpc_subnet_id: "{{ subnet.subnet.id }}"
+
 - name: Create security group
   amazon.aws.ec2_group:
     name: "GPT4All Security Group"
@@ -37,11 +41,6 @@
 - name: Set security_group_id variable
   set_fact:
     security_group_id: "{{ security_group.group_id }}"
-
-
-- name: Set vpc_subnet_id variable
-  set_fact:
-    vpc_subnet_id: "{{ subnet.subnet.id }}"
 
 
 - name: Create internet gateway

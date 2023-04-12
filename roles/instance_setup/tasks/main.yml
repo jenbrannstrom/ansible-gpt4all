@@ -32,20 +32,22 @@
   register: launch_template
 
 - name: Request Spot instance
-  amazon.aws.ec2_spot_instance:
-    state: present
+  amazon.aws.ec2_spot_instance_request:
     region: "{{ region }}"
-    instance_type: "{{ instance_type }}"
-    image_id: "{{ image_id }}"
-    key_name: "{{ key_name }}"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
     spot_price: "{{ spot_price }}"
-    spot_wait_timeout: "{{ spot_wait_timeout }}"
+    spot_wait_timeout: "{{ wait_timeout }}"
+    state: "present"
+    instance_type: "{{ instance_type }}"
+    image_id: "{{ ami_id }}"
+    key_name: "{{ key_pair }}"
+    security_group_ids: "{{ security_group_id }}"
     vpc_subnet_id: "{{ vpc_subnet_id }}"
-    security_group_ids:
-      - "{{ security_group_id }}"
     instance_tags:
-      Name: "{{ instance_name }}"
+      Name: GPT-4 All
   register: spot_instance
+
 
 
 - name: Get instance ID from Spot instance request

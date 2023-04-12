@@ -11,3 +11,5 @@
   vars:
     key_name: the_key_to_the_vpcinstance
     region: "us-east-1" # Replace with your preferred AWS region, for example, us-east-1
+    wait_timeout: 600
+
