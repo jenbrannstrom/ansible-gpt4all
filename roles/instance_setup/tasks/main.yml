@@ -20,6 +20,10 @@
       Name: "{{ instance_name }}"
   register: spot_instance
 
+- name: Wait for 5 minutes
+  pause:
+    minutes: 5
+
 - name: Debug spot_instance
   ansible.builtin.debug:
     var: spot_instance
@@ -50,3 +54,4 @@
     public_ip: "{{ eip.public_ip }}"
     region: "{{ region }}"
     aws_profile: "{{ aws_profile }}"
+
