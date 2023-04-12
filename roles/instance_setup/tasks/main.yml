@@ -24,32 +24,35 @@
   amazon.aws.ec2_instance:
     key_name: "{{ key_name }}"
     instance_type: t2.micro
-    image: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
+    image_id: ami-06e46074ae430fba6  # Amazon Linux 2 LTS AMI (HVM)
     wait: yes
     vpc_subnet_id: "{{ subnet.subnet.id }}"
     spot_price: "0.0075"
     region: "us-east-1"
     aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
     aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    instance_tags:
-      Name: GPT4All Instance
     instance_initiated_shutdown_behavior: terminate
-    count_tag:
-      Name: GPT4All Instance
-    exact_count: 1
+    launch_specification:
+      InstanceMarketOptions:
+        MarketType: 'spot'
+        SpotOptions:
+          MaxPrice: '0.0075'
   register: spot_request
 
 
+- name: Get instance ID from Spot instance request
+  set_fact:
+    instance_id: "{{ spot_request.instances[0].instance_id }}"
 
 - name: Tag Spot instance
-  amazon.aws.ec2_tag:
-    resource: "{{ spot_request.instance_id }}"
+  amazon.aws.ec2_instance:
+    instance_ids: "{{ instance_id }}"
+    tags:
+      Name: GPT4All Instance
     region: "us-east-1"
     aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
     aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
-    state: present
-    tags:
-      Name: GPT4All Instance
+
 
 
 - name: Allocate a new Elastic IP
