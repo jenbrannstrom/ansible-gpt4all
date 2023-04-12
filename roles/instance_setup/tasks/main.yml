@@ -1,7 +1,7 @@
 ---
 - name: Request Spot instance
   amazon.aws.ec2_spot_instance:
-    spot_price: "{{ spot_price }}"
+    spot_price: "{{ max_spot_price }}"
     state: present
     region: "{{ region }}"
     launch_specification:
@@ -19,10 +19,6 @@
     tags:
       Name: "{{ instance_name }}"
   register: spot_instance
-
-- name: Wait for 5 minutes
-  pause:
-    minutes: 5
 
 - name: Debug spot_instance
   ansible.builtin.debug:

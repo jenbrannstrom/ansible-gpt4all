@@ -6,7 +6,7 @@ launch_template_name: "GPT4All-Launch-Template"
 region: "us-east-1"
 instance_type: "t2.micro"
 image_id: "ami-06e46074ae430fba6"
-spot_price: "0.01"
+max_spot_price: "0.05"
 wait_timeout: 600
 spot_wait_timeout: 600
 vpc_subnet_id: "{{ vpc_subnet_id }}"
