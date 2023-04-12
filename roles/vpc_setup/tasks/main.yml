@@ -18,6 +18,32 @@
     secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
   register: subnet
 
+- name: Create security group
+  amazon.aws.ec2_group:
+    name: "GPT4All Security Group"
+    description: "Security group for GPT4All"
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "us-east-1"
+    access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+    secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+      # Add any other required rules here
+  register: security_group
+
+- name: Set security_group_id variable
+  set_fact:
+    security_group_id: "{{ security_group.group_id }}"
+
+
+- name: Set vpc_subnet_id variable
+  set_fact:
+    vpc_subnet_id: "{{ subnet.subnet.id }}"
+
+
 - name: Create internet gateway
   amazon.aws.ec2_vpc_igw:
     state: present
